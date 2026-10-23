@@ -28,7 +28,7 @@ const appCatalog = MessageCatalog(defaultLocale: 'ko', supportedLocales: ['ko','
     );
     Directory('${root.path}/lib/i18n').createSync(recursive: true);
     Directory('${root.path}/tool').createSync();
-    final packageRoot = Directory.current.absolute.path;
+    final packageRoot = Directory.current.absolute.path.replaceAll('\\', '/');
     File('${root.path}/pubspec.yaml').writeAsStringSync(
       'name: fixture_consumer\nenvironment:\n  sdk: ">=3.11.0 <4.0.0"\ndependencies:\n  message_i18n:\n    path: ${jsonEncode(packageRoot)}\n',
     );

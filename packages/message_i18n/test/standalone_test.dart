@@ -5,6 +5,8 @@ import 'package:message_i18n/message_i18n_codegen.dart';
 import 'package:message_i18n/src/tool/generation.dart';
 import 'package:test/test.dart';
 
+String _normalizeNewlines(String value) => value.replaceAll('\r\n', '\n');
+
 void main() {
   test(
     'standalone and CLI runtime agree including escaped strings and reload',
@@ -48,10 +50,15 @@ void main() {
   print(jsonEncode(rows));
 }
 ''');
-        final result = await Process.run(Platform.resolvedExecutable, [
-          '--packages=${Directory.current.path}/.dart_tool/package_config.json',
-          '${temp.path}/main.dart',
-        ]);
+        final result = await Process.run(
+          Platform.resolvedExecutable,
+          [
+            '--packages=${Directory.current.path}/.dart_tool/package_config.json',
+            '${temp.path}/main.dart',
+          ],
+          stdoutEncoding: utf8,
+          stderrEncoding: utf8,
+        );
         expect(result.exitCode, 0, reason: '${result.stderr}');
         final rows = jsonDecode(result.stdout as String) as List<Object?>;
         for (final rawRow in rows) {
@@ -169,32 +176,30 @@ void main() {
     expect(forward, contains('"a_a"'));
   });
 
-  test(
-    'multiple generated libraries use import-prefixed MessageKeys',
-    () async {
-      final temp = Directory.systemTemp.createTempSync('message_keys_prefix_');
-      try {
-        const first = MessageCatalog(
-          defaultLocale: 'en',
-          supportedLocales: ['en'],
-          messages: {
-            'screen.title': LocalizedMessage({'en': 'Account'}),
-          },
-        );
-        const second = MessageCatalog(
-          defaultLocale: 'en',
-          supportedLocales: ['en'],
-          messages: {
-            'screen.title': LocalizedMessage({'en': 'Checkout'}),
-          },
-        );
-        File(
-          '${temp.path}/account.dart',
-        ).writeAsStringSync(emitStandaloneCatalog(first));
-        File(
-          '${temp.path}/checkout.dart',
-        ).writeAsStringSync(emitStandaloneCatalog(second));
-        File('${temp.path}/main.dart').writeAsStringSync('''
+  test('multiple generated libraries use import-prefixed MessageKeys', () async {
+    final temp = Directory.systemTemp.createTempSync('message_keys_prefix_');
+    try {
+      const first = MessageCatalog(
+        defaultLocale: 'en',
+        supportedLocales: ['en'],
+        messages: {
+          'screen.title': LocalizedMessage({'en': 'Account'}),
+        },
+      );
+      const second = MessageCatalog(
+        defaultLocale: 'en',
+        supportedLocales: ['en'],
+        messages: {
+          'screen.title': LocalizedMessage({'en': 'Checkout'}),
+        },
+      );
+      File(
+        '${temp.path}/account.dart',
+      ).writeAsStringSync(emitStandaloneCatalog(first));
+      File(
+        '${temp.path}/checkout.dart',
+      ).writeAsStringSync(emitStandaloneCatalog(second));
+      File('${temp.path}/main.dart').writeAsStringSync('''
 import 'account.dart' as account;
 import 'checkout.dart' as checkout;
 void main() {
@@ -204,17 +209,24 @@ void main() {
   print(b.text(checkout.MessageKeys.screenTitle));
 }
 ''');
-        final result = await Process.run(Platform.resolvedExecutable, [
+      final result = await Process.run(
+        Platform.resolvedExecutable,
+        [
           '--packages=${Directory.current.path}/.dart_tool/package_config.json',
           '${temp.path}/main.dart',
-        ]);
-        expect(result.exitCode, 0, reason: '${result.stderr}');
-        expect((result.stdout as String).trim(), 'Account\nCheckout');
-      } finally {
-        temp.deleteSync(recursive: true);
-      }
-    },
-  );
+        ],
+        stdoutEncoding: utf8,
+        stderrEncoding: utf8,
+      );
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+      expect(
+        _normalizeNewlines((result.stdout as String).trim()),
+        'Account\nCheckout',
+      );
+    } finally {
+      temp.deleteSync(recursive: true);
+    }
+  });
 
   test('removed generated key makes a stale constant reference fail', () async {
     final temp = Directory.systemTemp.createTempSync('message_keys_stale_');
@@ -232,10 +244,15 @@ void main() {
 import 'messages.dart';
 void main() => print(createMessageResolver(selected: 'en').text(MessageKeys.appTitle));
 ''');
-      Future<ProcessResult> run() => Process.run(Platform.resolvedExecutable, [
-        '--packages=${Directory.current.path}/.dart_tool/package_config.json',
-        '${temp.path}/main.dart',
-      ]);
+      Future<ProcessResult> run() => Process.run(
+        Platform.resolvedExecutable,
+        [
+          '--packages=${Directory.current.path}/.dart_tool/package_config.json',
+          '${temp.path}/main.dart',
+        ],
+        stdoutEncoding: utf8,
+        stderrEncoding: utf8,
+      );
       expect((await run()).exitCode, 0);
       generated.writeAsStringSync(
         emitStandaloneCatalog(catalog('app.heading')),

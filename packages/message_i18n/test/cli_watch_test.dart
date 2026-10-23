@@ -17,6 +17,8 @@ const appCatalog = MessageCatalog(defaultLocale: 'ko', supportedLocales: ['ko','
     Platform.resolvedExecutable,
     [p.join(root.path, 'tool/i18n.dart'), ...args],
     workingDirectory: cwd ?? root.path,
+    stdoutEncoding: utf8,
+    stderrEncoding: utf8,
   );
   setUpAll(() async {
     root = Directory(
@@ -38,11 +40,13 @@ import '../lib/i18n/catalog.dart';
 Future<void> main(List<String> args) => MessageI18nTool(catalog: appCatalog, sourcePaths: ['lib/i18n'], generatedDirectory: 'lib/i18n/generated', watchEntrypoint: 'tool/i18n.dart').run(args);
 ''',
     );
-    final get = await Process.run(Platform.resolvedExecutable, [
-      'pub',
-      'get',
-      '--offline',
-    ], workingDirectory: root.path);
+    final get = await Process.run(
+      Platform.resolvedExecutable,
+      ['pub', 'get', '--offline'],
+      workingDirectory: root.path,
+      stdoutEncoding: utf8,
+      stderrEncoding: utf8,
+    );
     expect(get.exitCode, 0, reason: '${get.stderr}');
   });
   tearDownAll(() => root.deleteSync(recursive: true));
@@ -163,17 +167,22 @@ Future<void> main(List<String> args) => MessageI18nTool(catalog: appCatalog, sou
       File('${root.path}/lib/main.dart').writeAsStringSync(
         "import 'i18n/generated/message_loader.g.dart';\nvoid main() { print(createMessageResolver(selected: 'en-US').text('save')); }\n",
       );
-      final run = await Process.run(Platform.resolvedExecutable, [
-        'run',
-        'lib/main.dart',
-      ], workingDirectory: root.path);
+      final run = await Process.run(
+        Platform.resolvedExecutable,
+        ['run', 'lib/main.dart'],
+        workingDirectory: root.path,
+        stdoutEncoding: utf8,
+        stderrEncoding: utf8,
+      );
       expect(run.exitCode, 0, reason: '${run.stderr}');
-      expect(run.stdout, 'Save\n');
-      final analyze = await Process.run(Platform.resolvedExecutable, [
-        'analyze',
-        '--fatal-infos',
-        '--fatal-warnings',
-      ], workingDirectory: root.path);
+      expect((run.stdout as String).replaceAll('\r\n', '\n'), 'Save\n');
+      final analyze = await Process.run(
+        Platform.resolvedExecutable,
+        ['analyze', '--fatal-infos', '--fatal-warnings'],
+        workingDirectory: root.path,
+        stdoutEncoding: utf8,
+        stderrEncoding: utf8,
+      );
       expect(
         analyze.exitCode,
         0,

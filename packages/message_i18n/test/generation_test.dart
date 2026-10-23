@@ -16,6 +16,9 @@ MessageCatalog fixture({bool japanese = true, String value = '저장'}) =>
         }),
       },
     );
+
+String _normalizeNewlines(String value) => value.replaceAll('\r\n', '\n');
+
 void main() {
   late Directory root;
   late Directory target;
@@ -169,11 +172,17 @@ void main() {
       File('${root.path}/main.dart').writeAsStringSync(
         "import '공백 generated/messages_ko.g.dart';\nvoid main() { print(loadKoMessages()['save']); }\n",
       );
-      final run = await Process.run(Platform.resolvedExecutable, [
-        '${root.path}/main.dart',
-      ]);
+      final run = await Process.run(
+        Platform.resolvedExecutable,
+        ['${root.path}/main.dart'],
+        stdoutEncoding: utf8,
+        stderrEncoding: utf8,
+      );
       expect(run.exitCode, 0, reason: '${run.stderr}');
-      expect(run.stdout, '${special.replaceAll('{name}', 'name')}\n');
+      expect(
+        _normalizeNewlines(run.stdout as String),
+        '${special.replaceAll('{name}', 'name')}\n',
+      );
       final loader = File(
         '${target.path}/message_loader.g.dart',
       ).readAsStringSync();

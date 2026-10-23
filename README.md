@@ -2,7 +2,7 @@
 
 **English** | [한국어](https://github.com/mollacode/message_i18n/blob/main/README.ko.md)
 
-Message-centered localization for Dart and Flutter. Write all translations for a message together in a const Dart catalog, generate a standalone Dart runtime, and share JSON or Excel files with translators.
+A message-centered localization library for Dart and Flutter. Keep every translation of a message together in a const Dart catalog, generate a standalone runtime, and exchange JSON or Excel files with translators.
 
 ```dart
 // Author translations together.
@@ -11,13 +11,13 @@ Message-centered localization for Dart and Flutter. Write all translations for a
 // Read them in Flutter.
 Text(context.tr(MessageKeys.commonSave));
 Text(context.format(MessageKeys.welcomeUser, {'name': 'Dart'}));
-Text(context.tr('sample.multiline')); // Raw strings are also supported.
+Text(context.tr('common.save')); // Raw strings are also supported.
 
 // Change the language for subscribed widgets.
 context.updateLocale('en-US');
 ```
 
-`message_i18n` provides the pure Dart core and authoring tools. `message_i18n_flutter` provides the Flutter adapter; neither package contains native platform plugin code.
+Use `message_i18n` for the pure Dart runtime and authoring tools, and add `message_i18n_flutter` when you need Flutter integration. Neither package contains native platform code.
 
 ## Contents
 
@@ -40,7 +40,7 @@ context.updateLocale('en-US');
 
 ## Why message-centered catalogs?
 
-When reviewing a message, it helps to see its translations and placeholder names in one place. A catalog groups translations by message key, so a developer can review a wording change across languages without switching between locale files.
+A message is easier to review when all of its translations and placeholders are visible together. The catalog groups them under one key, so you can compare wording across languages without moving between locale files.
 
 - **One source of truth:** a const Dart catalog is the authoritative source. JSON and XLSX are exchange formats.
 - **Validation before generation:** detect missing translations, blank values, invalid locales, and inconsistent placeholders.
@@ -49,7 +49,7 @@ When reviewing a message, it helps to see its translations and placeholder names
 - **Reviewable translation imports:** merge creates a candidate and a key comparison report without changing the source.
 - **A small Flutter API:** `context.tr`, `context.format`, `context.updateLocale`, and `context.reloadMessages`.
 
-This workflow suits teams that maintain translations in code while exchanging spreadsheets with translators. Keys remain strings: this version does not generate typed message accessors or implement ICU plural rules.
+This approach works well when translations live in code but translators work with spreadsheets. Message keys are still strings; this version does not generate typed placeholder methods or support ICU plural rules.
 
 ```text
 const Dart catalog ── build_runner ──> standalone generated runtime
@@ -72,15 +72,15 @@ const Dart catalog ── build_runner ──> standalone generated runtime
 | `message_i18n_builder` | Development Builder and const catalog analysis | Dart 3.11 |
 | `message_i18n_flutter` | Flutter scope, context extensions, locale adapters | Dart 3.11 / Flutter 3.47 |
 
-The core runs without Flutter. The Flutter adapter depends on the core; neither package requires Riverpod or GetX. The authoring CLI runs on your development machine using filesystem and process APIs; it is not a browser API. Applications use the generated runtime loader.
+The core works without Flutter, and the Flutter adapter depends only on that core. Riverpod and GetX are optional. Authoring commands use filesystem and process APIs, so run them in your development environment rather than in a browser. The application itself loads the generated runtime.
 
 ## Quick start
 
-Use `build_runner` for the default development workflow. If your app already uses other generators, the same build/watch command runs them together. `MessageI18nTool` remains available as an optional, compatible CLI workflow.
+Start with `build_runner`. Its build and watch commands can run message_i18n alongside the other generators already used by your app. Use `MessageI18nTool` only when you need its optional CLI workflow.
 
 ### 1. Install the packages
 
-Run `dart pub add message_i18n` for Dart, or `flutter pub add message_i18n message_i18n_flutter` for Flutter. Add these development dependencies to the application's `pubspec.yaml`, then run `dart pub get` or `flutter pub get`:
+For a Dart app, run `dart pub add message_i18n`. For Flutter, run `flutter pub add message_i18n message_i18n_flutter`. Then add these development dependencies to the app's `pubspec.yaml` and run `dart pub get` or `flutter pub get`:
 
 ```yaml
 dev_dependencies:
@@ -88,7 +88,7 @@ dev_dependencies:
   build_runner: '>=2.16.2 <2.17.0'
 ```
 
-The builder supports build 4.x. The integration baseline with go_router_builder is build_runner 2.16.2; blindly combining the newest versions can conflict on the build major version.
+The builder supports build 4.x. The tested baseline with go_router_builder uses build_runner 2.16.2. Check compatible build versions before upgrading generators together, because their major-version constraints can conflict.
 
 For Flutter's built-in widget localization, also add:
 
@@ -100,7 +100,7 @@ dependencies:
 
 ### 2. Write the source catalog
 
-Create `lib/i18n/catalog.dart`; the filename is your choice. Do not import this source into application runtime. Annotate one top-level const catalog per input library:
+Create a catalog such as `lib/i18n/catalog.dart`; the path and filename are up to you. Keep this authoring file out of runtime imports, and annotate one top-level const catalog in each input library:
 
 ```dart
 import 'package:message_i18n/message_i18n.dart';
@@ -120,15 +120,25 @@ const appCatalog = MessageCatalog(
       'en': 'Welcome, {name}.',
       'ja': '{name}さん、ようこそ。',
     }),
+    'language.english': LocalizedMessage({
+      'ko': '영어',
+      'en': 'English',
+      'ja': '英語',
+    }),
+    'action.reload': LocalizedMessage({
+      'ko': '번역 다시 읽기',
+      'en': 'Reload messages',
+      'ja': '翻訳を再読込',
+    }),
   },
 );
 ```
 
-Every supported locale needs a nonblank translation. The default must be supported and placeholder names must agree across translations. Imported constants and const map spreads are resolved statically.
+Provide a nonblank translation for every supported locale, include the default locale in that list, and use the same placeholder names in every translation of a message. The builder also resolves imported constants and const map spreads.
 
 #### Message key rules
 
-A catalog key is the exact string used for lookup. Follow these rules when writing it:
+The catalog key is the exact value used at lookup time, so write it according to these rules:
 
 - The key must match `^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$`.
 - It starts with an ASCII lowercase letter. Each segment contains only ASCII lowercase letters and digits, and segments use one dot, hyphen or underscore as a separator.
@@ -150,13 +160,13 @@ class           -> class          (reserved; build failure)
 123.title       -> 123Title       (invalid; build failure)
 ```
 
-Rename an invalid or colliding source key, then run build again. The validator never rewrites a key automatically. When migrating an existing key, update the catalog key and every raw-string reference; generated member references update after the next build. The generated constants section below explains how to use the resulting fields.
+If a key is invalid or collides with another generated name, rename it in the catalog and rebuild. The validator will not alter it for you. When renaming an existing key, update every raw-string reference as well; generated member references will update on the next build. See [Generated message key constants](#generated-message-key-constants) for how to use those members.
 
 #### Placeholder and format parameter rules
 
-Write a replaceable value as `{identifier}`. An identifier must match `[A-Za-z_][A-Za-z0-9_]*`: it starts with an ASCII letter or underscore and then uses ASCII letters, digits or underscores. Names are case-sensitive. The lowercase message-key rule does not apply to placeholders, so a name such as `{userName}` is valid.
+Mark a replaceable value as `{identifier}`. The identifier must match `[A-Za-z_][A-Za-z0-9_]*`: begin with an ASCII letter or underscore, then use ASCII letters, digits, or underscores. Names are case-sensitive. Placeholder names do not follow the lowercase message-key rule, so `{userName}` is valid.
 
-Every translation of one message must use the same set of placeholder names. Their order and repetition count may differ by language, and the same placeholder may appear more than once in one translation.
+Use the same set of placeholder names in every translation of a message. Languages may place them in a different order or repeat them a different number of times.
 
 Pass a `Map<String, String>` whose keys exactly match the placeholder names:
 
@@ -168,25 +178,25 @@ final text = messages.format(
 // With the English catalog above: Welcome, Dart.
 ```
 
-A missing argument leaves that placeholder in the result and emits `missing_argument`. An unused argument is ignored and emits `extra_argument`. Convert numbers, dates and other values to strings in the application before passing them.
+If an argument is missing, the placeholder stays in the output and the resolver emits `missing_argument`. Extra arguments are ignored and reported as `extra_argument`. Convert numbers, dates, and other values to strings before passing them.
 
-Positional placeholders such as `{0}`, empty or unmatched braces, nested braces and ICU plural/select/gender syntax fail catalog validation. There is no syntax for escaping braces in this version.
+Catalog validation rejects positional placeholders such as `{0}`, empty or unmatched braces, nested braces, and ICU plural/select/gender syntax. This version does not provide brace escaping.
 
 ### 3. Validate and generate
 
-Run from the application root. No `tool/i18n.dart` entrypoint is required:
+Run the build from the application root. You do not need a `tool/i18n.dart` entrypoint:
 
 ```bash
 dart run build_runner build
 ```
 
-This validates the catalog and creates `lib/i18n/catalog.message_i18n.g.dart`, an independent runtime library. Do not connect it to the source using `part`.
+The build validates the catalog and writes `lib/i18n/catalog.message_i18n.g.dart` as an independent runtime library. Import it directly rather than connecting it to the source with `part`.
 
-The output name follows the source name. For example, `lib/i18n/account.dart` produces `lib/i18n/account.message_i18n.g.dart`. Changing the source filename or location is fine as long as imports point to the corresponding generated file.
+The output follows the source filename: `lib/i18n/account.dart`, for example, produces `lib/i18n/account.message_i18n.g.dart`. You may move or rename the source as long as runtime imports point to the matching generated file.
 
 ### Generated runtime contents
 
-Each annotated source catalog produces one standalone generated library. For the catalog above, the generated file contains these declarations:
+Each annotated catalog produces its own standalone library. The catalog above generates these declarations:
 
 | Generated item | What it does | Short example |
 |---|---|---|
@@ -198,23 +208,23 @@ Each annotated source catalog produces one standalone generated library. For the
 | `MessageKeys` | Contains one `static const String` for every catalog key. The value remains the exact source key. | `messages.text(MessageKeys.commonSave)` |
 | `load<Locale>Messages()` | Returns the generated message map for one supported locale. One function is generated per locale, such as `loadEnMessages()` and `loadKoMessages()`. | `loadKoMessages()[MessageKeys.commonSave]` |
 
-Most applications use `createMessageResolver`, `MessageKeys`, and `supportedMessageLocales`. The resolution and loader functions are available for advanced integration, diagnostics, and tests; normal lookup should go through `MessageResolver`.
+Most apps need only `createMessageResolver`, `MessageKeys`, and `supportedMessageLocales`. Use the lower-level locale and loader functions for custom integrations, diagnostics, or tests; regular message lookup belongs on `MessageResolver`.
 
-If you import a generated library with a prefix, access all of its generated declarations through that prefix:
+When a generated library has an import prefix, use that prefix for every declaration it contains:
 
 ```dart
 import 'i18n/catalog.message_i18n.g.dart' as appI18n;
 
 final messages = appI18n.createMessageResolver(selected: 'en-US');
 final locales = appI18n.supportedMessageLocales;
-final title = messages.text(appI18n.MessageKeys.appTitle);
+final saved = messages.text(appI18n.MessageKeys.commonSave);
 ```
 
-Each source catalog still produces a separate runtime library. An import prefix disambiguates declarations; it does not merge catalogs or resolvers.
+Each source catalog remains a separate runtime library. The prefix only disambiguates names; it does not combine catalogs or resolvers.
 
 ### 4. Use the generated runtime
 
-After generation, use it from `lib/main.dart`. Flutter composition is shown in the next section.
+Once the file exists, import it from runtime code such as `lib/main.dart`. The next section shows the Flutter setup.
 
 ```dart
 import 'i18n/catalog.message_i18n.g.dart';
@@ -231,12 +241,13 @@ void main() {
 
 ### Generated message key constants
 
-The same build that creates the runtime library also creates `MessageKeys`. Each field is a `static const String` whose value is the exact catalog key:
+The runtime build also generates `MessageKeys`. Every field is a `static const String` that preserves the catalog key exactly:
 
 ```dart
 abstract final class MessageKeys {
-  static const String appTitle = 'app.title';
+  static const String actionReload = 'action.reload';
   static const String commonSave = 'common.save';
+  static const String languageEnglish = 'language.english';
   static const String welcomeUser = 'welcome.user';
 }
 ```
@@ -245,10 +256,10 @@ Both forms are supported:
 
 | Form | Use it when |
 |---|---|
-| `context.tr(MessageKeys.appTitle)` | The key is known at compile time. Misspelled, deleted or renamed generated members become compile errors. |
-| `context.tr('app.title')` | The key is dynamic or the application is migrating gradually. Missing keys are reported by the normal runtime diagnostic. |
+| `context.tr(MessageKeys.commonSave)` | The key is known at compile time. Misspelled, deleted or renamed generated members become compile errors. |
+| `context.tr('common.save')` | The key is dynamic or the application is migrating gradually. Missing keys are reported by the normal runtime diagnostic. |
 
-The Builder first checks the source-key grammar described above. It then converts valid key segments separated by dots, hyphens or underscores to lowerCamelCase. It never invents a prefix, suffix, number, hash or alias. Generation fails when different valid keys produce the same member, or when the result is a Dart keyword or an inherited `Object` member.
+The Builder validates the source key before converting dot-, hyphen-, or underscore-separated segments to lowerCamelCase. It never adds a prefix, suffix, number, hash, or alias to make a name compile. Generation fails if two keys produce the same member or if the result is a Dart keyword or inherited `Object` member.
 
 ```text
 a.a, a_a, a-a  -> MessageKeys.aA  -> build failure
@@ -256,9 +267,9 @@ class           -> MessageKeys.class -> build failure
 123.title       -> invalid_key -> build failure before constant generation
 ```
 
-Rename the catalog key and run build again. A failed build does not emit a partial `MessageKeys` class. Constants appear after the initial build and update whenever build or watch processes a catalog change. Removing or renaming a key removes its generated member, so remaining constant references fail during analysis or compilation.
+Resolve these errors by renaming the catalog key and rebuilding. A failed build does not leave a partial `MessageKeys` class. Constants appear after the first successful build and change whenever build or watch processes the catalog. If you remove or rename a key, any old member reference will fail during analysis or compilation.
 
-Each generated catalog library declares its own `MessageKeys`. When an application consumes more than one, use import prefixes and use each key with the resolver created by the same generated library:
+Every generated catalog library has its own `MessageKeys`. If an app uses several catalogs, distinguish their imports with prefixes and pair each key with the resolver from the same library:
 
 ```dart
 import 'account.message_i18n.g.dart' as accountI18n;
@@ -282,7 +293,7 @@ checkoutMessages.text(checkoutI18n.MessageKeys.paymentTitle);
 | build --only-check | Detect missing, modified or stale generated files without repairing outputs |
 | Legacy CLI check | Optional catalog-only validation without generated files |
 
-During development, leave this single command running. Installed Freezed, router and JSON builders also participate as their inputs change:
+During development, keep one watch command running. Freezed, router, JSON, and other installed builders will run from the same watcher when their inputs change:
 
 ```bash
 dart run build_runner watch
@@ -290,7 +301,7 @@ dart run build_runner watch
 
 ## Flutter setup
 
-The Flutter app also imports only the generated loader. `supportedMessageLocales` in the example below is generated from the catalog's `supportedLocales`; `defaultMessageLocale` and the other generated declarations are listed in [Generated runtime contents](#generated-runtime-contents). `MessageI18nTool` and the source catalog remain in development code; see [Authoring and code generation](#authoring-and-code-generation). The following `lib/main.dart` uses the generated messages:
+Flutter runtime code imports the generated library, not the source catalog. In the example below, `supportedMessageLocales` comes from the catalog's `supportedLocales`. [Generated runtime contents](#generated-runtime-contents) lists `defaultMessageLocale` and the remaining declarations. Keep `MessageI18nTool` and the source catalog in development code; [Authoring and code generation](#authoring-and-code-generation) explains that workflow. A complete `lib/main.dart` looks like this:
 
 ```dart
 import 'package:flutter/material.dart';
@@ -298,9 +309,31 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:message_i18n_flutter/message_i18n_flutter.dart';
 import 'i18n/catalog.message_i18n.g.dart';
 
-void main() {
-  final resolver = createMessageResolver(selected: 'ko-KR');
-  runApp(MessageI18nScope(resolver: resolver, child: const MyApp()));
+void main() => runApp(const AppRoot());
+
+class AppRoot extends StatefulWidget {
+  const AppRoot({super.key});
+
+  @override
+  State<AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<AppRoot> {
+  final _resolver = createMessageResolver(selected: 'ko-KR');
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    _resolver.reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MessageI18nScope(
+      resolver: _resolver,
+      child: const MyApp(),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -318,10 +351,10 @@ class MyApp extends StatelessWidget {
           children: [
             Text(context.tr(MessageKeys.commonSave)),
             Text(context.format(MessageKeys.welcomeUser, {'name': 'Dart'})),
-            Text(context.tr('sample.multiline')),
+            Text(context.tr('common.save')),
             TextButton(
               onPressed: () => context.updateLocale('en-US'),
-              child: const Text('English'),
+              child: Text(context.tr(MessageKeys.languageEnglish)),
             ),
           ],
         ),
@@ -331,11 +364,11 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-Place `MessageI18nScope` above `MaterialApp` so routes, nested navigators, dialogs, bottom sheets, and overlays can share it. A context above the scope cannot read it.
+Put `MessageI18nScope` above `MaterialApp`. Routes, nested navigators, dialogs, bottom sheets, and overlays can then reach the same resolver. A context created above the scope cannot read it.
 
-`flutter_localizations` and its delegates are configured by the consumer. The library translates your messages; it does not automatically configure built-in Material/Cupertino labels. `messageLocale` preserves script and country subtags when converting a locale string to Flutter's `Locale`.
+Configure `flutter_localizations` and its delegates in the app. message_i18n translates your messages but does not set up Material or Cupertino's built-in labels. When converting a locale string to Flutter's `Locale`, `messageLocale` preserves script and country subtags.
 
-Read translations in `build`, or recompute cached labels in `didChangeDependencies`. A string saved once in `initState` will not change when the language changes.
+Read translated text in `build`, or refresh cached labels in `didChangeDependencies`. A string captured once in `initState` will stay unchanged when the locale changes.
 
 ## Runtime API and locale behavior
 
@@ -348,11 +381,11 @@ Read translations in `build`, or recompute cached labels in `didChangeDependenci
 | `locale` / `selected` | `context.i18n.locale` / `.selected` | Resolved locale / original request |
 | `addListener` / `removeListener` | Scope manages its subscription | Subscribe outside Flutter |
 
-`tr`, `format`, and `context.i18n` register a widget dependency. `updateLocale` and `reloadMessages` use non-listening access. `MessageI18nScope.read(context)` is also available for non-listening access; `of` listens and `maybeOf` allows an absent scope.
+Calling `tr`, `format`, or `context.i18n` subscribes the widget to resolver changes. Commands such as `updateLocale` and `reloadMessages` read without subscribing. For direct access, `MessageI18nScope.of` listens, `read` does not, and `maybeOf` handles a missing scope.
 
 ### Locale selection
 
-Normalization accepts a two- or three-letter language, an optional four-letter script, and an optional two-letter or three-digit region:
+A locale may contain a two- or three-letter language code, an optional four-letter script, and an optional two-letter or three-digit region:
 
 | Input | Normalized |
 |---|---|
@@ -360,13 +393,13 @@ Normalization accepts a two- or three-letter language, an optional four-letter s
 | `zh_hant_tw` | `zh-Hant-TW` |
 | `ko-KR` | `ko-KR` |
 
-Selection tries the exact locale, removes trailing subtags one at a time, then uses the catalog default. For example, `zh-Hant-TW → zh-Hant → zh → default`, choosing the first supported entry. Unsupported variants, extensions, or segment order throw `FormatException`; an invalid locale is not treated as an ordinary fallback request.
+Locale selection starts with an exact match, removes trailing subtags one at a time, and finally falls back to the catalog default. For `zh-Hant-TW`, the order is `zh-Hant-TW → zh-Hant → zh → default`; the first supported entry wins. Invalid variants, extensions, or subtag order throw `FormatException` instead of entering the fallback chain.
 
-The resolver retains one current message map and replaces it on selection or reload. There is no per-message fallback map or all-locale map cache. This does **not** guarantee that other locale strings are absent from the application binary or the entire VM heap.
+The resolver keeps only the current message map and replaces it after selection or reload. It has no per-message fallback map or cache of every locale. Other locale strings may still exist elsewhere in the application binary or VM heap.
 
 ### Placeholders and diagnostics
 
-Only `{identifier}` placeholders are supported, with names matching `[A-Za-z_][A-Za-z0-9_]*`. Arguments are `Map<String, String>`. Brace escaping, nested expressions, ICU plural/select/gender, and automatic number/date formatting are outside this version's scope.
+Placeholders use `{identifier}` names that match `[A-Za-z_][A-Za-z0-9_]*`, and formatting accepts a `Map<String, String>`. This version does not handle escaped braces, nested expressions, ICU plural/select/gender rules, or automatic number and date formatting.
 
 ```dart
 final messages = createMessageResolver(
@@ -384,21 +417,23 @@ final messages = createMessageResolver(
 | Extra argument | Ignores the unused argument | `extra_argument` |
 | Unsupported placeholder syntax | Returns the unformatted message | `unsupported_placeholder` |
 
-Diagnostics carry code, key, and locale. Strict catalog checks catch translation problems before generation. `MessageResolver.fromLoader` is a lower-level API for loader bridges and test fakes; applications normally use the generated factory.
+Each diagnostic includes a code, key, and locale. Strict catalog validation catches translation errors before generation. `MessageResolver.fromLoader` exists for loader bridges and test fakes; application code will usually use the generated factory.
 
 ## State management and ownership
 
-Choose one owner and one subscription mechanism for the application-wide resolver. The built-in scope, Riverpod, and GetX integrations below are alternatives; do not wrap the state-management examples in `MessageI18nScope`.
+Give the application-wide resolver one owner and one way to notify the UI. The built-in scope, Riverpod, and GetX examples are three alternatives. When Riverpod or GetX owns the resolver, do not add `MessageI18nScope` around it.
+
+The examples below were verified with Flutter 3.47.7, flutter_riverpod 3.4.3, and get 4.7.3. Riverpod and GetX remain optional app dependencies; none of the message_i18n packages depends on them.
 
 ### Built-in MessageI18nScope
 
-Without another state manager, create one resolver at the composition root and pass it to `MessageI18nScope` above `MaterialApp`. The scope subscribes to the external resolver but neither creates nor disposes it. Widgets use `context.tr`, `context.format`, `context.updateLocale`, and `context.reloadMessages` as shown in [Flutter setup](#flutter-setup).
+If the app does not use another state manager, create one resolver at the composition root and pass it to `MessageI18nScope` above `MaterialApp`. The scope listens to that resolver but does not create or dispose it. Widgets can then use `context.tr`, `context.format`, `context.updateLocale`, and `context.reloadMessages` as shown in [Flutter setup](#flutter-setup).
 
-Those context extensions require a `MessageI18nScope` ancestor. The Riverpod and GetX integrations instead call the resolver through their own provider or controller, so they do not use the context extensions.
+These context extensions work only below `MessageI18nScope`. Riverpod and GetX route the same operations through their provider or controller instead, so those examples do not use the extensions.
 
 ### Riverpod
 
-The consumer application adds `flutter_riverpod`. `ProviderScope` owns the provider container, a `NotifierProvider` owns one generated resolver, and watched immutable state rebuilds both `MaterialApp.locale` and message widgets. Always change or reload the locale through the notifier; calling the resolver directly would bypass Riverpod's state publication.
+Add `flutter_riverpod` to the app and place `ProviderScope` at its root. A `NotifierProvider` owns the generated resolver and publishes a new state wrapper and revision after a successful change. This rebuilds both `MaterialApp.locale` and the widgets that display messages. Change or reload the locale through the notifier; calling the resolver directly bypasses that update.
 
 ```dart
 import 'package:flutter/material.dart';
@@ -449,11 +484,22 @@ void main() => runApp(
   const ProviderScope(child: RiverpodApp()),
 );
 
-class RiverpodApp extends ConsumerWidget {
+class RiverpodApp extends ConsumerStatefulWidget {
   const RiverpodApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RiverpodApp> createState() => _RiverpodAppState();
+}
+
+class _RiverpodAppState extends ConsumerState<RiverpodApp> {
+  @override
+  void reassemble() {
+    super.reassemble();
+    ref.read(messagesProvider.notifier).reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final messages = ref.watch(messagesProvider);
     return MaterialApp(
       locale: messageLocale(messages.locale),
@@ -474,7 +520,7 @@ class RiverpodMessagesPage extends ConsumerWidget {
     return Scaffold(
       body: Column(
         children: [
-          Text(messages.text(MessageKeys.appTitle)),
+          Text(messages.text(MessageKeys.commonSave)),
           Text(
             messages.format(
               MessageKeys.welcomeUser,
@@ -483,11 +529,11 @@ class RiverpodMessagesPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => controller.select('en-US'),
-            child: const Text('English'),
+            child: Text(messages.text(MessageKeys.languageEnglish)),
           ),
           TextButton(
             onPressed: controller.reload,
-            child: const Text('Reload'),
+            child: Text(messages.text(MessageKeys.actionReload)),
           ),
         ],
       ),
@@ -496,11 +542,11 @@ class RiverpodMessagesPage extends ConsumerWidget {
 }
 ```
 
-`MessagesState` creates a new wrapper after a successful `select` or `reload`, so `ref.watch` observes a new state even though the application deliberately keeps the same resolver instance. If locale loading throws, the new state assignment is not reached and the previous resolver state remains active.
+After `select` or `reload` succeeds, `MessagesState` wraps the same resolver in a new state object. This wrapper and its revision are UI notification values, not historical translation snapshots: an older wrapper still reads the current locale from the shared mutable resolver. If locale loading throws, no state is published and the previous locale remains active.
 
 ### GetX
 
-The consumer application adds `get`. `GetMaterialApp` supplies the GetX root, `initialBinding` registers one application-wide controller, and `GetBuilder` subscribes message widgets. The controller updates GetX's root locale after the resolver has successfully selected a locale, then calls `update()` for message widgets.
+Add `get` to the app and use `GetMaterialApp` as its root. Register one permanent controller before `runApp`, then let a root `GetBuilder` rebuild `GetMaterialApp.locale` and the message widgets from that controller.
 
 ```dart
 import 'package:flutter/material.dart';
@@ -523,7 +569,7 @@ class MessagesController extends GetxController {
 
   void select(String locale) {
     _resolver.select(locale);
-    Get.updateLocale(messageLocale(_resolver.locale));
+    Get.locale = messageLocale(_resolver.locale);
     update();
   }
 
@@ -533,22 +579,35 @@ class MessagesController extends GetxController {
   }
 }
 
-class AppBinding extends Bindings {
-  @override
-  void dependencies() {
-    Get.put<MessagesController>(MessagesController(), permanent: true);
-  }
+void main() {
+  Get.put(MessagesController(), permanent: true);
+  runApp(const GetXApp());
 }
 
-void main() => runApp(
-  GetMaterialApp(
-    initialBinding: AppBinding(),
-    locale: messageLocale(defaultMessageLocale),
-    supportedLocales: messageLocales(supportedMessageLocales),
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    home: const GetXMessagesPage(),
-  ),
-);
+class GetXApp extends StatefulWidget {
+  const GetXApp({super.key});
+
+  @override
+  State<GetXApp> createState() => _GetXAppState();
+}
+
+class _GetXAppState extends State<GetXApp> {
+  @override
+  void reassemble() {
+    super.reassemble();
+    Get.find<MessagesController>().reload();
+  }
+
+  @override
+  Widget build(BuildContext context) => GetBuilder<MessagesController>(
+    builder: (messages) => GetMaterialApp(
+      locale: messageLocale(messages.locale),
+      supportedLocales: messageLocales(supportedMessageLocales),
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      home: const GetXMessagesPage(),
+    ),
+  );
+}
 
 class GetXMessagesPage extends StatelessWidget {
   const GetXMessagesPage({super.key});
@@ -558,7 +617,7 @@ class GetXMessagesPage extends StatelessWidget {
     body: GetBuilder<MessagesController>(
       builder: (messages) => Column(
         children: [
-          Text(messages.text(MessageKeys.appTitle)),
+          Text(messages.text(MessageKeys.commonSave)),
           Text(
             messages.format(
               MessageKeys.welcomeUser,
@@ -567,11 +626,11 @@ class GetXMessagesPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => messages.select('en-US'),
-            child: const Text('English'),
+            child: Text(messages.text(MessageKeys.languageEnglish)),
           ),
           TextButton(
             onPressed: messages.reload,
-            child: const Text('Reload'),
+            child: Text(messages.text(MessageKeys.actionReload)),
           ),
         ],
       ),
@@ -580,13 +639,11 @@ class GetXMessagesPage extends StatelessWidget {
 }
 ```
 
-The controller calls `Get.updateLocale` for Flutter's localized Material/Cupertino resources and `update()` for `GetBuilder` message consumers. This package does not register GetX `translations` and does not provide a `String.tr` extension; use the controller's `text` and `format` methods to avoid confusion with GetX's own localization API.
-
-Riverpod and GetX remain optional consumer dependencies. The message_i18n packages do not depend on either state manager.
+The controller synchronizes `Get.locale` with the resolver, then one `update()` rebuilds both the root `GetMaterialApp` and the message `GetBuilder`. This avoids `Get.updateLocale`, which performs an asynchronous whole-app reassemble in get 4.7.3 and can conflict with widget-test frames and the hot-reload hook above. message_i18n does not register GetX `translations` or add a `String.tr` extension. Use the controller's `text` and `format` methods for message_i18n lookups.
 
 ## Authoring and code generation
 
-`message_i18n_builder` statically reads annotated constants and uses the shared validator. It does not execute your application or `MessageI18nTool`. The output keeps locale factories and the loader in one file while preserving the runtime's current-locale Map behavior.
+`message_i18n_builder` reads annotated constants statically and validates them without running the app or `MessageI18nTool`. It writes the locale factories and loader to one file, while the runtime continues to hold only the current locale's message map.
 
 ### Builder paths and filenames
 
@@ -597,9 +654,9 @@ Riverpod and GetX remain optional consumer dependencies. The message_i18n packag
 | Rename the catalog variable | Keep the annotation; the generated loader API stays the same |
 | Inputs outside lib | Include them in build target sources and generate_for |
 
-Default inputs are Dart files under lib, excluding generated files. Annotate one catalog per library. Use import prefixes when consuming multiple generated libraries. Output sits beside the source with a fixed suffix; CLI generatedDirectory/sourcePaths/watchEntrypoint settings do not configure the Builder.
+By default, the Builder reads Dart files under `lib/` and skips generated files. Annotate one catalog per library. When you import more than one generated library, give each import a prefix. Output appears beside its source with a fixed suffix; the CLI settings `generatedDirectory`, `sourcePaths`, and `watchEntrypoint` do not affect the Builder.
 
-Optionally narrow inputs in the consumer's build.yaml:
+To limit which files the Builder reads, configure `build.yaml` in the app:
 
 ```yaml
 targets:
@@ -612,13 +669,13 @@ targets:
 
 ### Optional CLI and existing projects
 
-The configuration below is for catalog-only check, JSON/XLSX export/merge, or retaining legacy CLI generation. It is not required for the default Builder workflow. To migrate, add the annotation and development dependencies, build, then change the app import. The old generated directory is not automatically deleted. Do not run both watchers together.
+Use the configuration below only for catalog checks, JSON/XLSX exchange, or the legacy CLI generator. The regular Builder workflow does not need it. When migrating, add the annotation and development dependencies, run a build, and update the app's generated import. Remove the old generated directory yourself when it is no longer needed, and do not run the Builder and CLI watchers at the same time.
 
 To use the optional CLI, create `tool/i18n.dart`:
 
 ```dart
 import 'package:message_i18n/message_i18n_tool.dart';
-import '../lib/i18n/catalog.dart';
+import 'package:your_app/i18n/catalog.dart';
 
 Future<void> main(List<String> args) => MessageI18nTool(
   catalog: appCatalog,
@@ -628,9 +685,11 @@ Future<void> main(List<String> args) => MessageI18nTool(
 ).run(args);
 ```
 
+Replace `your_app` with the `name` declared in your application's `pubspec.yaml`.
+
 ### Legacy CLI configuration details
 
-`MessageI18nTool` connects the authoring side of the package to its generated runtime. It receives a const `MessageCatalog` object directly and provides validation, generation, watching, export, and merge commands. It runs only when a developer or CI invokes the tool entrypoint; it does not run when the application starts.
+`MessageI18nTool` is the entry point for the optional authoring CLI. Give it a const `MessageCatalog`, and it can validate, generate, watch, export, or merge translations. The tool runs only when a developer or CI invokes its entrypoint; starting the application does not run it.
 
 #### Development lifecycle
 
@@ -642,7 +701,7 @@ CI:              check --verify-generated
 translation:     export → external edit → merge candidate → human review → catalog
 ```
 
-Creating the catalog file and tool entrypoint is normally a one-time setup. The catalog contents are not one-time configuration: they remain the authoritative source and are edited whenever messages or locales change. Those changes must be followed by `generate`, unless `watch` is already running and performs the generation cycle automatically.
+You normally create the catalog file and tool entrypoint once. The catalog itself remains the source of truth, so keep editing it as messages and locales change. Run `generate` after each change, or leave `watch` running to regenerate automatically.
 
 #### Tool configuration
 
@@ -656,7 +715,7 @@ Creating the catalog file and tool entrypoint is normally a one-time setup. The 
 
 #### Custom paths and filenames
 
-`lib/i18n/catalog.dart`, `tool/i18n.dart`, and `lib/i18n/generated/` are examples, not required names. A different layout works when its Dart imports, tool settings, commands, and runtime imports agree. For example:
+The paths `lib/i18n/catalog.dart`, `tool/i18n.dart`, and `lib/i18n/generated/` are examples. You can choose another layout as long as the Dart imports, tool settings, commands, and runtime import all point to the same places. For example:
 
 ```dart
 import 'package:message_i18n/message_i18n_tool.dart';
@@ -670,7 +729,7 @@ Future<void> main(List<String> args) => MessageI18nTool(
 ).run(args);
 ```
 
-Run that entrypoint by its actual path:
+Use the entrypoint's actual path when running a command:
 
 ```bash
 dart run scripts/localization.dart generate
@@ -686,7 +745,7 @@ dart run scripts/localization.dart watch
 | Generated directory | `generatedDirectory` and the application's generated-loader import |
 | Command working root | Run beside the consumer `pubspec.yaml`, or set `projectRoot` explicitly |
 
-A catalog outside `sourcePaths` can still be imported when you invoke `generate` directly, but `watch` will not observe changes outside its configured directories. All relative paths are resolved from `projectRoot`. Keep the generated directory inside the project and dedicated to tool-owned output.
+A direct `generate` command can import a catalog outside `sourcePaths`, but `watch` only sees changes inside the configured directories. Relative paths start at `projectRoot`. Keep generated output in a dedicated directory inside the project so the tool can manage it safely.
 
 #### Manual generation or watch
 
@@ -702,11 +761,11 @@ For automatic generation while editing:
 dart run tool/i18n.dart watch
 ```
 
-`watch` performs an initial generation and then observes `.dart` files under `sourcePaths`. Application code always consumes the generated loader; it never imports the authoring catalog or tool entrypoint.
+`watch` generates once at startup and then monitors `.dart` files under `sourcePaths`. Runtime code continues to import the generated loader, never the authoring catalog or tool entrypoint.
 
 ## CLI reference
 
-Run every command from the consumer application's root, where `pubspec.yaml` and the configured tool entrypoint exist:
+Run CLI commands from the app root that contains `pubspec.yaml` and the configured tool entrypoint:
 
 ```bash
 dart run tool/i18n.dart <command> [options]
@@ -727,7 +786,7 @@ dart run tool/i18n.dart check
 dart run tool/i18n.dart check --verify-generated
 ```
 
-`check` validates locale identifiers, the default and supported locale relationship, message keys, missing or blank translations, and placeholder syntax and consistency. It does not write generated files. Add `--verify-generated` in CI to generate expected output in a temporary directory and compare each expected tool-owned file with `generatedDirectory`; it fails when generated files are missing, modified, or stale.
+`check` validates locale identifiers, the default and supported locale relationship, message keys, missing or blank translations, and placeholder syntax across languages. It never writes generated files. In CI, add `--verify-generated` to create the expected output in a temporary directory and compare it with the tool-owned files in `generatedDirectory`. The command fails if an output is missing, modified, or stale.
 
 ### `generate`: write runtime files
 
@@ -736,9 +795,9 @@ dart run tool/i18n.dart generate
 dart run tool/i18n.dart generate --output lib/i18n/generated
 ```
 
-`generate` validates the catalog and writes one Dart message file per locale, `message_loader.g.dart`, and `message_i18n_manifest.json`. The optional `--output` overrides `generatedDirectory` for that run and must name a dedicated directory inside the project. Generation stages and formats complete files before replacing tool-owned output. The manifest controls stale-file deletion; the command refuses to overwrite files it does not own.
+`generate` validates the catalog, then writes one Dart message file per locale along with `message_loader.g.dart` and `message_i18n_manifest.json`. Use `--output` to override `generatedDirectory` for one run; the target must be a dedicated directory inside the project. The command stages and formats complete files before replacing its existing output. It uses the manifest to remove stale files and refuses to overwrite files it does not own.
 
-Run `generate` after changing the catalog, supported locales, or generation settings. Application code then continues to import the same generated loader path.
+Run `generate` whenever the catalog, supported locales, or generation settings change. The application can keep importing the same generated loader path.
 
 ### `watch`: regenerate while editing
 
@@ -747,9 +806,9 @@ dart run tool/i18n.dart watch
 dart run tool/i18n.dart watch --debounce-ms 400
 ```
 
-`watch` performs an initial generation, then watches `.dart` files under `sourcePaths`. It groups rapid changes using a 250 ms debounce by default and runs generation cycles serially in fresh Dart processes. Generated output, `build/`, and `.dart_tool/` are excluded to prevent loops. A failed cycle preserves the last successful output and keeps watching so the next valid edit can recover. Stop it with `Ctrl+C`.
+`watch` generates once, then monitors `.dart` files under `sourcePaths`. By default it groups rapid edits within 250 ms and runs each generation cycle in a fresh Dart process, one at a time. It ignores generated output, `build/`, and `.dart_tool/` to avoid loops. If a cycle fails, the last successful output remains in place and the watcher waits for the next edit. Press `Ctrl+C` to stop it.
 
-After a successful cycle, use Flutter hot reload for message text changes. Use hot restart when locale structure or generated imports change.
+After a successful cycle, hot reload is enough for message text changes. Use hot restart when the locale structure or generated imports change.
 
 ### `export`: create translator files
 
@@ -759,7 +818,7 @@ dart run tool/i18n.dart export --locales ko,en --format xlsx --output build/tran
 dart run tool/i18n.dart export --locales ko,en --format xlsx --split-by-locale
 ```
 
-`--locales` is a comma-separated list of supported locales and `--format` is `json` or `xlsx`; both are required. Without `--output`, the command creates a new timestamped directory under `build/message_i18n/exports/`. For one combined file, `--output` must have the selected format's extension. With `--split-by-locale`, `--output` is a directory and the command writes one file per locale. Existing export destinations are not overwritten.
+Both `--locales` and `--format` are required. Pass locales as a comma-separated list and choose either `json` or `xlsx`. Without `--output`, the command creates a timestamped directory under `build/message_i18n/exports/`. For a combined export, point `--output` to a file with the selected extension. With `--split-by-locale`, point it to a directory instead. Export never overwrites an existing destination.
 
 ### `merge`: create a review candidate
 
@@ -771,9 +830,9 @@ dart run tool/i18n.dart merge \
   --output build/message_i18n/review
 ```
 
-Repeat `--input` for each `.json` or `.xlsx` file. When the same key and locale occurs more than once, the later input wins and the tool prints a warning. The output must be a new directory under the project's `build/` directory. It contains `merged_catalog.dart` and `key-comparison.json`.
+Add one `--input` option for each `.json` or `.xlsx` file. If several files contain the same key and locale, the last input wins and the tool prints a warning. Choose a new output directory under the project's `build/` directory; the command writes `merged_catalog.dart` and `key-comparison.json` there.
 
-`merge` never edits the source catalog and does not fill values absent from the inputs with source values. Review the candidate, the key comparison, and all warnings, then manually apply accepted changes to `catalog.dart` and run `check` and `generate` again.
+`merge` leaves the source catalog untouched and never fills missing input values from that source. Review the candidate, key comparison, and warnings, then copy accepted changes into `catalog.dart` yourself and run `check` and `generate` again.
 
 ### Help, version, and exit codes
 
@@ -783,9 +842,9 @@ dart run tool/i18n.dart <command> --help
 dart run tool/i18n.dart --version
 ```
 
-Exit code **0** means success, **1** means a validation, input structure, parsing, process, or file operation failure, and **64** means invalid command usage. Normal results go to stdout; errors and merge warnings go to stderr. `__watch-cycle` is an internal command used by `watch` and should not be invoked directly.
+Exit code **0** indicates success. Code **1** covers validation, malformed input, parsing, process, and file errors; **64** indicates invalid command usage. Normal output goes to stdout, while errors and merge warnings go to stderr. `__watch-cycle` belongs to the watcher and should not be called directly.
 
-Strict validation reports `invalid_locale`, `empty_locales`, `duplicate_locale`, `missing_default`, `invalid_key`, `unsupported_locale`, `empty_translation`, `missing_translation`, `unsupported_placeholder`, and `placeholder_mismatch`. Issues are sorted by severity, key, locale, then code. Dart itself rejects duplicate const map keys and incompatible value types before the tool can run.
+Strict validation can report `invalid_locale`, `empty_locales`, `duplicate_locale`, `missing_default`, `invalid_key`, `unsupported_locale`, `empty_translation`, `missing_translation`, `unsupported_placeholder`, and `placeholder_mismatch`. Reports are sorted by severity, key, locale, and code. Duplicate const map keys and incompatible value types fail in Dart before the tool starts.
 
 ## Translation workflow
 
@@ -797,7 +856,7 @@ dart run tool/i18n.dart export --locales ko,en --format xlsx --output build/tran
 dart run tool/i18n.dart export --locales ko,en --format xlsx --split-by-locale
 ```
 
-Without an explicit destination, exports go under `build/message_i18n/exports/<timestamp>/`. A single output is a file with the matching extension; split output is a directory. Existing files are not overwritten. Automatically allocated directories use suffixes when names collide.
+If you omit the destination, the export goes to `build/message_i18n/exports/<timestamp>/`. A combined export uses a file with the matching extension; a split export uses a directory. Existing files stay untouched, and automatically named directories receive a suffix if the timestamp already exists.
 
 JSON groups values by key and then locale:
 
@@ -815,9 +874,9 @@ XLSX uses a sheet named `translations`:
 | common.save | 저장 | Save |
 | welcome.user | {name}님, 환영합니다. | Welcome, {name}. |
 
-The first header must be exactly `key`; locale columns follow the requested order. There are no description, source-path, or hidden metadata columns. Keep cells as text: numeric and formula cells are rejected. Exported values beginning with `=`, `+`, `-`, or `@` are explicitly stored as text.
+The first header must be exactly `key`, followed by locale columns in the requested order. The sheet has no description, source-path, or hidden metadata columns. Keep every cell as text: imports reject numeric and formula cells, and exports store values beginning with `=`, `+`, `-`, or `@` explicitly as text.
 
-Duplicate normalized locale headers or duplicate key rows are structural errors. Completely empty rows are ignored; nonempty rows without keys are rejected. Blank translation cells are read as empty strings.
+The importer rejects duplicate normalized locale headers, duplicate key rows, and nonempty rows without a key. It ignores completely empty rows and reads blank translation cells as empty strings.
 
 ### 2. Merge returned files
 
@@ -830,11 +889,11 @@ The output directory defaults to `build/message_i18n/merges/<timestamp>/` and co
 - `merged_catalog.dart`: a standalone `mergedCatalog` candidate.
 - `key-comparison.json`: sorted key differences relative to the original catalog.
 
-**Merge uses only the supplied inputs.** It does not update the original or fill missing keys/translations from it. For overlapping key/locale pairs, the last input wins and a warning identifies the previous and final input numbers. Thus, importing only English does not silently restore Korean and Japanese from the original catalog.
+**Merge uses only the files you supply.** It neither changes the original catalog nor fills missing keys or translations from it. When inputs overlap, the last value for a key and locale wins, and a warning identifies both input positions. An English-only import therefore remains English-only; Korean and Japanese values are not silently copied from the source.
 
-Missing languages, blank values, placeholder differences, and key differences produce warnings or reports but do not prevent a candidate from being created. Successful candidate creation returns exit code 0; it does not mean the candidate passes strict validation. Malformed files and I/O failures return 1. Output must remain under the consumer's `build/` directory.
+Missing languages, blank values, placeholder differences, and key differences appear as warnings or reports, but the tool can still create a candidate. Exit code 0 means that candidate creation succeeded, not that strict validation passed. Malformed files and I/O errors return 1. Merge output must stay under the app's `build/` directory.
 
-Key comparison checks key sets, not translation equality. The current human-readable report uses Korean:
+Key comparison looks only at which keys exist; it does not compare translation text. The human-readable report currently uses Korean:
 
 ```text
 원본과 병합본의 키가 일치합니다.
@@ -849,7 +908,7 @@ This means the key sets match. When they differ, the applicable sections are pri
 - new.key
 ```
 
-The first section lists original-only keys; the second lists merged-only keys. The machine-readable equivalent is:
+The first section contains keys found only in the source, and the second contains keys found only in the merged candidate. The same result is available in machine-readable form:
 
 ```json
 {"matched":false,"originalOnly":["old.key"],"mergedOnly":["new.key"]}
@@ -857,24 +916,24 @@ The first section lists original-only keys; the second lists merged-only keys. T
 
 ### 3. Review and apply
 
-Review warnings, translations, and key differences. Manually apply approved changes to the original Dart catalog, then run `dart run build_runner build`. For legacy CLI generation, use `check`, `generate`, and `check --verify-generated`. The tool intentionally has no command to apply a candidate automatically.
+Review the warnings, translated text, and key differences before copying approved changes into the Dart catalog. Then run `dart run build_runner build`. Projects that still use CLI generation should run `check`, `generate`, and `check --verify-generated`. There is no command that applies a merge candidate automatically.
 
 ## Generated files and recovery
 
-A failed build can remove the previous output file. Fix the source and wait for successful regeneration before reloading the app.
+If a build fails, build_runner may remove the previous output. Fix the catalog and wait for generation to succeed before reloading the app.
 
-The Builder's `.message_i18n.g.dart` paths are reserved for build_runner. Do not put hand-written files there: build can replace modified output. `build --only-check` reports differences without writing or deleting public output files; internal `.dart_tool` cache activity is separate. Invalid catalogs fail the build; fix them and rebuild or let watch recover. The legacy CLI rollback guarantee does not apply to Builder-managed outputs.
+Reserve `.message_i18n.g.dart` paths for build_runner because a build may replace anything written there by hand. `build --only-check` reports differences without writing or deleting public output; changes inside the private `.dart_tool` cache are separate. An invalid catalog fails the build, so fix it and rebuild or let watch recover. Builder-managed output does not have the legacy CLI's rollback guarantee.
 
 ### Legacy CLI file ownership
 
 
-Treat the generated directory as tool output. The manifest records the schema, catalog fingerprint, locales, key count, and owned files. Do not edit generated translations; update the catalog and regenerate.
+Treat the generated directory as tool-owned. Its manifest records the schema, catalog fingerprint, locales, key count, and owned files. To change a translation, edit the catalog and regenerate instead of modifying the output.
 
-You can commit generated files for review and reproducibility, or generate them before analysis and build. If you commit them, CI can detect stale output with `check --verify-generated`.
+Either commit generated files for review and reproducibility, or create them before analysis and build. When they are committed, use `check --verify-generated` in CI to catch stale output.
 
-Generation validates, stages, formats, and checks the target snapshot before replacing owned files. Replacement uses **per-file rename with rollback on failure**, not an atomic swap of the whole file set. Unowned files are preserved; stale cleanup is limited to manifest-owned files. Path escapes, symlinks, and attempts to claim non-generated files are rejected.
+Before replacing its files, the CLI validates the catalog, stages and formats complete output, and checks that the destination has not changed. It uses **per-file rename with rollback on failure**, so the whole file set is not swapped atomically. Files outside the manifest remain untouched, and stale cleanup removes only manifest-owned files. The CLI rejects path escapes, symlinks, and attempts to take ownership of unrelated files.
 
-An OS lock prevents concurrent generation to the same target. A zero-byte sibling guard such as `.generated.message_i18n.lock` remains on disk and is ignored by Git; the OS releases its lock when the process exits. Do not delete the guard to bypass contention. After a hard kill or power loss, use `check --verify-generated` and regenerate if necessary; whole-set recovery from every abrupt interruption is not guaranteed.
+An OS lock prevents two processes from generating into the same target. Its zero-byte guard file, such as `.generated.message_i18n.lock`, stays beside the output and is ignored by Git; the actual lock is released when the process exits. Do not delete the guard to bypass contention. After a forced shutdown or power loss, run `check --verify-generated` and regenerate if needed. Recovery of the entire file set cannot be guaranteed after every abrupt interruption.
 
 ## Watch and hot reload
 
@@ -884,25 +943,27 @@ In a separate terminal, run:
 dart run build_runner watch
 ```
 
-build_runner tracks changed inputs and their dependencies. Diagnose a failed build and correct the source to recover within the same watch session. Stop with Ctrl-C. Other installed builders share the same watcher.
+build_runner tracks input files and their dependencies. If a build fails, correct the reported source while the watcher keeps running; it will try again after the next change. Press Ctrl-C to stop. Other installed builders use the same watch process.
 
-After generation succeeds, trigger Flutter hot reload yourself. To refresh an existing resolver, add the following hook to the application-owned `State` that holds it:
+Generation does not reload the Flutter app for you. The root owner must refresh its existing resolver when Flutter calls `reassemble()` during hot reload. The `AppRoot` shown in [Flutter setup](#flutter-setup) does this directly:
 
 ```dart
 @override
 void reassemble() {
   super.reassemble();
-  resolver.reload();
+  _resolver.reload();
 }
 ```
 
+The Riverpod example calls `ref.read(messagesProvider.notifier).reload()` from `RiverpodApp.reassemble()`. The GetX example calls `Get.find<MessagesController>().reload()` from `GetXApp.reassemble()`. Each hook goes through the same owner that normally publishes UI updates.
+
 | Change | Development action |
 |---|---|
-| Existing translation text | Generate, then hot reload with `resolver.reload()` |
+| Existing translation text | Generate, then hot reload with the owner's `_resolver.reload()` hook |
 | New message key and its usage | Generate, then hot reload |
 | Supported locales or initialization structure | Generate, then hot restart |
 
-The watcher does not connect to the Flutter daemon or trigger reload automatically. Reload does not re-run `main`, `initState`, or existing static initialization; see [Flutter's hot reload documentation](https://docs.flutter.dev/tools/hot-reload).
+The watcher never connects to the Flutter daemon, so it cannot request a reload. Remember that hot reload does not rerun `main`, `initState`, or existing static initializers. See [Flutter's hot reload documentation](https://docs.flutter.dev/tools/hot-reload) for the full behavior.
 
 ## Troubleshooting
 
@@ -911,7 +972,7 @@ The watcher does not connect to the Flutter daemon or trigger reload automatical
 | A message key appears instead of text | Check the key and `missing_key` diagnostic; regenerate after catalog changes |
 | `{name}` remains visible | Supply `name` as a string argument to `format` |
 | A requested locale resolves to another locale | Inspect `selected`, `locale`, and the supported-locale fallback chain |
-| Widgets keep the previous language | Read inside `build`/`didChangeDependencies`; share one resolver and place the scope above routes |
+| Widgets keep the previous language | Read during rebuild and share one resolver. Put the built-in Scope above routes, or make every route/dialog watch the same Riverpod provider or GetX controller. |
 | Scope lookup fails | Use a descendant context or move the scope above the consumer |
 | Built-in Flutter labels are wrong | Configure `flutter_localizations`, delegates, `locale`, and `supportedLocales` in the consumer |
 | Edited source is not visible after reload | Wait for successful generation and ensure `reassemble` calls the existing resolver's `reload` |
@@ -928,21 +989,21 @@ If generated files are committed, resolve dependencies and check before running 
 dart run build_runner build --only-check
 ```
 
-If generated files are ignored by Git, build first, then analyze/test/build the application. A subsequent only-check verifies the just-generated outputs, not the freshness of committed files. Missing outputs correctly fail only-check. Legacy CLI check --verify-generated only checks its multi-file/manifest format.
+If Git ignores generated files, generate them before analyzing, testing, or building the app. Running only-check afterward verifies the files just created; it does not say anything about committed-file freshness. Missing output correctly causes only-check to fail. The legacy CLI's `check --verify-generated` applies only to its multi-file manifest format.
 
-The joint integration baseline is build_runner 2.16.2, build 4.0.11, Freezed 4.0.3, go_router_builder 4.5.2, go_router 18.1.1 and json_serializable 6.15.2. That combined fixture uses Dart 3.13 and Flutter 3.47. The Builder itself requires Dart 3.11. Verify both dependency resolution and execution of generated code.
+The tested integration set uses build_runner 2.16.2, build 4.0.11, Freezed 4.0.3, go_router_builder 4.5.2, go_router 18.1.1, and json_serializable 6.15.2 on Dart 3.13 and Flutter 3.47. The Builder itself supports Dart 3.11. When using another combination, check both dependency resolution and the generated code at runtime.
 
 ## Scope and limitations
 
-This version generates String key constants, but does not provide typed placeholder functions. It also does not provide ICU plurals/gender, remote translation delivery, a translation web UI, native resource generation, automatic source application, or deferred locale downloads. Applications choose and persist the requested locale themselves.
+This version generates String constants for message keys, but not typed functions for placeholders. ICU plurals and gender, remote delivery, a translation web UI, native resource generation, automatic source updates, and deferred locale downloads are also outside its scope. The app chooses and stores the user's requested locale.
 
 ## License
 
-Licensed under [MIT No Attribution (MIT-0)](LICENSE). You may use, modify, and distribute this software for any purpose, including commercial use, without an attribution requirement. It is provided without warranty. Dependencies retain their own licenses.
+message_i18n uses the [MIT No Attribution (MIT-0)](LICENSE) license. You may use, modify, and distribute it for any purpose, including commercial projects, without attribution. The software comes without warranty, and each dependency retains its own license.
 
 ## README references
 
-Documentation structure was inspired by these widely used pub.dev package READMEs. These are presentation references, not runtime dependencies or performance comparisons.
+The structure of this guide draws on the following widely used pub.dev package READMEs. They are writing references only, not runtime dependencies or performance comparisons.
 
 | Reference | Documentation pattern used |
 |---|---|

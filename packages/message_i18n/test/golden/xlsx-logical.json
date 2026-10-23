@@ -1,0 +1,22 @@
+{
+  "sheet": "translations",
+  "headers": [
+    "key",
+    "en",
+    "ko"
+  ],
+  "messages": {
+    "common.save": {
+      "en": "Save",
+      "ko": "저장"
+    },
+    "escaping": {
+      "en": "quote \" slash \\ dollar $ line\nCR\rtab\t {name}",
+      "ko": "quote \" slash \\ dollar $ line\nCR\rtab\t {name}"
+    },
+    "welcome": {
+      "en": "Hi {name}\n🌍",
+      "ko": "안녕 {name}\n🌍"
+    }
+  }
+}

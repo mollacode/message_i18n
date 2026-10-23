@@ -1,0 +1,24 @@
+name: message_i18n_flutter
+description: >-
+  Flutter localization with reactive message scopes, context extensions,
+  locale switching, and an app-owned message_i18n resolver.
+version: 0.1.0
+repository: https://github.com/mollacode/message_i18n/tree/main/packages/message_i18n_flutter
+issue_tracker: https://github.com/mollacode/message_i18n/issues
+topics:
+  - localization
+  - internationalization
+  - i18n
+environment:
+  sdk: '>=3.11.0 <4.0.0'
+  flutter: '>=3.47.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  message_i18n: ^0.1.0
+dev_dependencies:
+  flutter_localizations:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+  lints: ^6.1.0

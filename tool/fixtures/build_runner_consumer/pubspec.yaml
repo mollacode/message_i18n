@@ -1,0 +1,25 @@
+name: build_runner_consumer
+publish_to: none
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  message_i18n:
+    path: ../../../packages/message_i18n
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.12.0
+  go_router: ^18.1.1
+dev_dependencies:
+  lints: ^6.1.0
+  flutter_test:
+    sdk: flutter
+  message_i18n_builder:
+    path: ../../../packages/message_i18n_builder
+  build_runner: '>=2.16.2 <2.17.0'
+  freezed: ^4.0.3
+  json_serializable: ^6.15.2
+  go_router_builder: ^4.5.2
+dependency_overrides:
+  message_i18n:
+    path: ../../../packages/message_i18n

@@ -1,0 +1,11 @@
+// Review candidate only. Original source was not changed.
+import 'package:message_i18n/message_i18n.dart';
+
+const mergedCatalog = MessageCatalog(
+  defaultLocale: "ko",
+  supportedLocales: ["ko", "en", "ja"],
+  messages: {
+    "added": LocalizedMessage({"en": "New"}),
+    "welcome": LocalizedMessage({"ko": "안녕 {name}"}),
+  },
+);

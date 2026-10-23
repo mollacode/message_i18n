@@ -1,0 +1,11 @@
+{
+  "common.save": {
+    "ko": "저장"
+  },
+  "escaping": {
+    "ko": "quote \" slash \\ dollar $ line\nCR\rtab\t {name}"
+  },
+  "welcome": {
+    "ko": "안녕 {name}\n🌍"
+  }
+}

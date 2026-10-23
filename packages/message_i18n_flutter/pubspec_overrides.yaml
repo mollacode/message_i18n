@@ -1,0 +1,4 @@
+# Local development only; excluded from the published archive.
+dependency_overrides:
+  message_i18n:
+    path: ../message_i18n

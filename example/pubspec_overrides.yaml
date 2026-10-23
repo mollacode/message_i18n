@@ -1,0 +1,4 @@
+# Use the same local core as the Flutter adapter during development.
+dependency_overrides:
+  message_i18n:
+    path: ../packages/message_i18n

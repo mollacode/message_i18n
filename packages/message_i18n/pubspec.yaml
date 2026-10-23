@@ -1,0 +1,22 @@
+name: message_i18n
+description: >-
+  Message-centered Dart localization with validated catalogs, generated locale
+  loaders, named placeholders, and JSON/Excel translation exchange.
+version: 0.1.0
+repository: https://github.com/mollacode/message_i18n/tree/main/packages/message_i18n
+issue_tracker: https://github.com/mollacode/message_i18n/issues
+topics:
+  - localization
+  - internationalization
+  - i18n
+environment:
+  sdk: '>=3.11.0 <4.0.0'
+dependencies:
+  args: ^2.7.0
+  crypto: ^3.0.7
+  excel: ^4.0.6
+  path: ^1.9.1
+  watcher: ^1.2.1
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.33.0

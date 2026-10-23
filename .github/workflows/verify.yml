@@ -1,0 +1,42 @@
+name: verify
+on:
+  push:
+  pull_request:
+jobs:
+  dart-core:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.13.5'
+      - run: dart pub get
+        working-directory: packages/message_i18n
+      - run: dart analyze --fatal-infos --fatal-warnings
+        working-directory: packages/message_i18n
+      - run: dart test
+        working-directory: packages/message_i18n
+      - run: dart pub get
+        working-directory: packages/message_i18n_builder
+      - run: dart analyze --fatal-infos --fatal-warnings
+        working-directory: packages/message_i18n_builder
+      - run: dart test
+        working-directory: packages/message_i18n_builder
+  flutter:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+      - run: dart pub get
+      - run: dart run tool/verify.dart --build
+
+      - run: dart run tool/verify_builder_integration.dart

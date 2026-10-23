@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "catalogFingerprint": "5203277c309d11b94450d6cce1bc3f911a667b671c28d10e65ff56f93b8a7809",
+  "locales": [
+    "ko",
+    "en",
+    "ja"
+  ],
+  "keyCount": 3,
+  "ownedFiles": [
+    "message_loader.g.dart",
+    "messages_en.g.dart",
+    "messages_ja.g.dart",
+    "messages_ko.g.dart"
+  ]
+}

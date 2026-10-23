@@ -1,0 +1,10 @@
+.dart_tool/
+build/
+doc/api/
+.pub/
+.packages
+.flutter-plugins*
+.DS_Store
+pubspec.lock
+pubspec_overrides.yaml
+*.message_i18n.lock

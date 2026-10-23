@@ -1,0 +1,7 @@
+name: message_i18n_workspace
+description: Private repository verification tooling.
+publish_to: none
+environment:
+  sdk: '>=3.11.0 <4.0.0'
+dev_dependencies:
+  lints: ^6.1.0

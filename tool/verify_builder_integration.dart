@@ -4,7 +4,7 @@ import 'dart:io';
 
 /// Runs real builders in an isolated consumer; never edits the checked-in fixture.
 Future<void> main() async {
-  final root = Directory.current.absolute.path;
+  final root = Directory.current.absolute.path.replaceAll('\\', '/');
   final fixture = Directory('$root/tool/fixtures/build_runner_consumer');
   final temp = Directory.systemTemp.createTempSync('message_i18n_builders_');
   Process? watcher;

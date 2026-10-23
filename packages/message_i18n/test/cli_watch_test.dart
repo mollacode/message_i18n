@@ -214,7 +214,12 @@ Future<void> main(List<String> args) => MessageI18nTool(catalog: appCatalog, sou
       ];
       Future<void> until(bool Function() condition) async {
         final deadline = DateTime.now().add(const Duration(seconds: 30));
-        while (!condition()) {
+        while (true) {
+          try {
+            if (condition()) return;
+          } on FileSystemException {
+            // Windows can briefly lock a generated file during replacement.
+          }
           if (DateTime.now().isAfter(deadline)) {
             fail('watch timeout: $stdoutLines\n$stderrLines');
           }
@@ -228,6 +233,15 @@ Future<void> main(List<String> args) => MessageI18nTool(catalog: appCatalog, sou
       final generated = File(
         '${root.path}/lib/i18n/generated/messages_ko.g.dart',
       );
+      Future<String> readGenerated() async {
+        String? contents;
+        await until(() {
+          contents = generated.readAsStringSync();
+          return true;
+        });
+        return contents!;
+      }
+
       try {
         await until(() => successes() >= 1);
         await Future<void>.delayed(const Duration(seconds: 4));
@@ -242,17 +256,17 @@ Future<void> main(List<String> args) => MessageI18nTool(catalog: appCatalog, sou
         }
         await until(() => generated.readAsStringSync().contains('수정19'));
         await until(() => successes() >= 2);
-        final saved = generated.readAsStringSync();
+        final saved = await readGenerated();
         catalog.writeAsStringSync('broken Dart {');
         await until(
           () => stderrLines.any((s) => s.contains('Generation failed')),
         );
-        expect(generated.readAsStringSync(), saved);
+        expect(await readGenerated(), saved);
         catalog.writeAsStringSync(source('복구'));
         await until(() => generated.readAsStringSync().contains('복구'));
         await Future<void>.delayed(const Duration(seconds: 4));
         final count = successes();
-        generated.writeAsStringSync(generated.readAsStringSync());
+        generated.writeAsStringSync(await readGenerated());
         await Future<void>.delayed(const Duration(seconds: 4));
         expect(successes(), count);
       } finally {

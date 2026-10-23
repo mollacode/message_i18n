@@ -1,0 +1,14 @@
+name: Publish message_i18n_builder to pub.dev
+
+on:
+  push:
+    tags:
+      - 'message_i18n_builder-v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  publish:
+    permissions:
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+    with:
+      working-directory: packages/message_i18n_builder
